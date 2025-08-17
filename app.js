@@ -1,4 +1,7 @@
+require('dotenv').config()
 const express=require('express')
+const jwt=require('jsonwebtoken')
+
 const app=express()
 const router=express.Router()
 const cors=require('cors')
@@ -6,6 +9,7 @@ const bodyparser=require('body-parser')
 const db=require('./dbs')
 const bcrypt=require('bcrypt')
 const UserModel=require('./models')
+const accesstoken=process.env.AccessToken
 
 db.getsetData()
 app.use(cors())
@@ -60,13 +64,37 @@ router.post('/login',async(req,res)=>{
         console.log(password)
      
         
-        const validation=await bcrypt.compare(hashedpass,password)
+        const validation=await bcrypt.compare(password,hashedpass)
         return validation
+      
        
 
     }
+    console.log(userdata.name)
     let answer=await isvalid(hashedpass,password)
-    console.log(answer)
+      if(answer){
+            console.log(answer)
+            const token= jwt.sign({name:userdata.name},accesstoken,{expiresIn:"1h"})
+            res.send({token})
+             
+        }
+      else{
+        res.status(400).send({message:"Invalid Credentials"})
+      }
+})
+router.post('/authorize',(req,res)=>{
+        let token=req.headers['authorization'].split(" ")[1]
+        console.log(token)
+       
+        jwt.verify(token,accesstoken,(err,decoded)=>{
+            if(err){
+                res.status(400).send({message:"Login Expired"})
+            }
+            else{
+                console.log(decoded)
+            res.send({message:`welcome ${decoded.name}`})}
+            
+        })
 })
 
 app.listen(3000,()=>{console.log("Server Successfully Running")})
